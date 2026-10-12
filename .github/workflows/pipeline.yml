@@ -1,0 +1,17 @@
+# Placeholder so branch protection has a check to require.
+# Switches to the self-hosted runner and gets build/deploy jobs once the CI VM is up.
+name: Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repo check
+        run: echo "Pipeline triggered for ${{ github.sha }}"
