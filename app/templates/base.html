@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}TaskFlow{% endblock %} | AeroDeploy</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="site-header">
+    <div class="container header-content">
+            <a class="brand" href="{{ url_for('ui.dashboard') }}">
+                TaskFlow
+            </a>
+            <nav aria-label="Main navigation">
+                <a href="{{ url_for('ui.dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('ui.projects') }}">Projects</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main-content" class="container">
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+            <div class="notice notice-{{ category }}" role="status">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-content">
+            <span>TaskFlow · AeroDeploy</span>
+            <span>Version <code>{{ config['APP_VERSION'] }}</code></span>
+        </div>
+    </footer>
+</body>
+</html>

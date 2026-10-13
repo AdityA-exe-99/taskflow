@@ -1,0 +1,10 @@
+# The script builds this base from the normal Dockerfile first.
+FROM taskflow-test-runtime:local
+
+USER root
+COPY requirements-test-lock.txt /app/requirements-test-lock.txt
+RUN python -m pip install --no-cache-dir \
+        -c /app/requirements-lock.txt -r /app/requirements-test-lock.txt \
+    && python -m pip check
+
+USER taskflow

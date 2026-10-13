@@ -1,0 +1,19 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.vscode
+.idea
+evidence
+
+# Generated test and coverage reports
+test-results/
+.coverage*
+coverage.xml
+htmlcov/

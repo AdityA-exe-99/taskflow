@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Create project{% endblock %}
+
+{% block content %}
+    <div class="page-heading">
+        <h1>Create project</h1>
+        <p class="muted">Give your project a name and an optional description.</p>
+    </div>
+
+    <section class="card form-card">
+        {% if errors.get('form') %}
+            <div class="notice notice-error" role="alert">
+                {{ errors['form'] }}
+            </div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('ui.create_project') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="field">
+                <label for="name">Project name</label>
+                <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    value="{{ values['name'] }}"
+                    maxlength="120"
+                    required
+                    aria-invalid="{{ 'true' if errors.get('name') else 'false' }}"
+                    aria-describedby="name-help{% if errors.get('name') %} name-error{% endif %}"
+                >
+                <p id="name-help" class="help-text">
+                    Required. Up to 120 characters.
+                </p>
+
+                {% if errors.get('name') %}
+                    <p id="name-error" class="field-error" role="alert">
+                        {{ errors['name'] }}
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="field">
+                <label for="description">Description</label>
+                <textarea
+                    id="description"
+                    name="description"
+                    rows="5"
+                    maxlength="2000"
+                    aria-invalid="{{ 'true' if errors.get('description') else 'false' }}"
+                    aria-describedby="description-help{% if errors.get('description') %} description-error{% endif %}"
+                >{{ values['description'] }}</textarea>
+                <p id="description-help" class="help-text">
+                    Optional. Up to 2,000 characters.
+                </p>
+
+                {% if errors.get('description') %}
+                    <p id="description-error" class="field-error" role="alert">
+                        {{ errors['description'] }}
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="actions">
+                <button type="submit">Create project</button>
+                <a class="button button-secondary"
+                   href="{{ url_for('ui.projects') }}">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% macro field_error(field) %}
+    {% if errors.get(field) %}
+        <p id="{{ field }}-error" class="field-error" role="alert">
+            {{ errors[field] }}
+        </p>
+    {% endif %}
+{% endmacro %}
+
+{% block content %}
+    <div class="page-heading">
+        <p>
+            <a href="{{ url_for('ui.project_detail', project_id=project.id) }}">
+                {{ project.name }}
+            </a>
+        </p>
+        <h1>{{ page_title }}</h1>
+    </div>
+
+    <section class="card form-card">
+        {% if errors.get('form') %}
+            <div class="notice notice-error" role="alert">
+                {{ errors['form'] }}
+            </div>
+        {% endif %}
+
+        <form method="post" action="{{ form_action }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="field">
+                <label for="title">Task title</label>
+                <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    value="{{ values['title'] }}"
+                    maxlength="200"
+                    required
+                    aria-invalid="{{ 'true' if errors.get('title') else 'false' }}"
+                    aria-describedby="title-help{% if errors.get('title') %} title-error{% endif %}"
+                >
+                <p id="title-help" class="help-text">
+                    Required. Up to 200 characters.
+                </p>
+                {{ field_error('title') }}
+            </div>
+
+            <div class="field">
+                <label for="description">Description</label>
+                <textarea
+                    id="description"
+                    name="description"
+                    rows="4"
+                    maxlength="2000"
+                    aria-invalid="{{ 'true' if errors.get('description') else 'false' }}"
+                    aria-describedby="description-help{% if errors.get('description') %} description-error{% endif %}"
+                >{{ values['description'] }}</textarea>
+                <p id="description-help" class="help-text">
+                    Optional. Up to 2,000 characters.
+                </p>
+                {{ field_error('description') }}
+            </div>
+
+            {% for field, label, choices in [
+                ('status', 'Status', statuses),
+                ('priority', 'Priority', priorities)
+            ] %}
+                <div class="field">
+                    <label for="{{ field }}">{{ label }}</label>
+                    <select
+                        id="{{ field }}"
+                        name="{{ field }}"
+                        required
+                        aria-invalid="{{ 'true' if errors.get(field) else 'false' }}"
+                        {% if errors.get(field) %}
+                            aria-describedby="{{ field }}-error"
+                        {% endif %}
+                    >
+                        {% for value, option_label in choices.items() %}
+                            <option value="{{ value }}"
+                                {% if values[field] == value %}selected{% endif %}>
+                                {{ option_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {{ field_error(field) }}
+                </div>
+            {% endfor %}
+
+            <div class="field">
+                <label for="due_date">Due date</label>
+                <input
+                    id="due_date"
+                    name="due_date"
+                    type="date"
+                    value="{{ values['due_date'] }}"
+                    aria-invalid="{{ 'true' if errors.get('due_date') else 'false' }}"
+                    aria-describedby="due_date-help{% if errors.get('due_date') %} due_date-error{% endif %}"
+                >
+                <p id="due_date-help" class="help-text">
+                    Optional. Leave blank if there is no deadline.
+                </p>
+                {{ field_error('due_date') }}
+            </div>
+
+            <div class="actions">
+                <button type="submit">{{ submit_label }}</button>
+                <a class="button button-secondary"
+                   href="{{ url_for('ui.project_detail', project_id=project.id) }}">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

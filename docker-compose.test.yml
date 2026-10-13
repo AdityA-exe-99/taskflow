@@ -1,0 +1,42 @@
+# Standalone test stack. Do not merge with docker-compose.yml.
+services:
+  test-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: taskflow_test
+      POSTGRES_USER: taskflow_test
+      POSTGRES_PASSWORD: taskflow-test-only
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow_test -d taskflow_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  tests:
+    image: taskflow-test-runner:local
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DATABASE_URL: postgresql://taskflow_test:taskflow-test-only@test-db:5432/taskflow_test
+      SECRET_KEY: taskflow-test-only-session-key
+      APP_VERSION: automated-tests
+      TASKFLOW_TESTING: "1"
+      COVERAGE_FILE: /app/test-results/.coverage
+    volumes:
+      - ./tests:/app/tests:ro
+      - type: bind
+        source: ${TASKFLOW_TEST_REPORTS:-./test-results/latest}
+        target: /app/test-results
+    entrypoint: ["python", "/app/tests/run_tests.py"]
+    command: []
+    depends_on:
+      test-db:
+        condition: service_healthy
+
+networks:
+  default:
+    internal: true

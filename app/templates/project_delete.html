@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Delete project{% endblock %}
+
+{% block content %}
+    <div class="page-heading">
+        <p>
+            <a href="{{ url_for('ui.projects') }}">Back to projects</a>
+        </p>
+        <h1>Delete project</h1>
+    </div>
+
+    <section class="card form-card">
+        <h2>{{ project_name }}</h2>
+
+        <p>
+            Tasks currently in this project:
+            <strong>{{ task_count }}</strong>
+        </p>
+        <p>
+            This permanently deletes this project and all its tasks.
+            This cannot be undone.
+        </p>
+
+        {% if error_message %}
+            <div class="notice notice-error" role="alert">
+                {{ error_message }}
+            </div>
+        {% endif %}
+
+        <form method="post"
+              action="{{ url_for('ui.delete_project', project_id=project_id) }}">
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <div class="actions">
+                <button type="submit" class="button-danger">
+                    {% if task_count %}
+                        Delete project and its tasks
+                    {% else %}
+                        Delete project
+                    {% endif %}
+                </button>
+                <a class="button button-secondary"
+                   href="{{ url_for('ui.projects') }}">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </section>
+{% endblock %}
