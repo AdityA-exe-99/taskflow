@@ -1,0 +1,276 @@
+:root {
+    color-scheme: light;
+    --background: #f4f6fa;
+    --surface: #ffffff;
+    --text: #182338;
+    --muted: #526176;
+    --border: #d6deea;
+    --primary: #2453c5;
+    --primary-hover: #193f9b;
+    --danger: #b42318;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--background);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+}
+
+.container {
+    width: min(1100px, calc(100% - 2rem));
+    margin-inline: auto;
+}
+
+.site-header {
+    background: #16243d;
+    color: white;
+}
+
+.header-content,
+.footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-block: 1rem;
+}
+
+.site-header a {
+    color: white;
+}
+
+.brand {
+    font-size: 1.5rem;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+nav {
+    display: flex;
+    gap: 1.25rem;
+}
+
+main {
+    flex: 1;
+    padding-block: 2rem 3rem;
+}
+
+h1, h2, h3 {
+    line-height: 1.25;
+}
+
+h1 {
+    margin-top: 0;
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+
+a {
+    color: var(--primary);
+    text-underline-offset: 0.2em;
+}
+
+.muted,
+.help-text {
+    color: var(--muted);
+}
+
+.page-heading {
+    margin-bottom: 1.5rem;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: 1rem;
+}
+
+.card {
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow-wrap: anywhere;
+}
+
+.card h2,
+.card h3 {
+    margin-top: 0;
+}
+
+.form-card {
+    max-width: 720px;
+}
+
+.field {
+    margin-bottom: 1.25rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 650;
+}
+
+input:not([type="hidden"]),
+textarea,
+select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #8392a8;
+    border-radius: 6px;
+    background: white;
+    color: var(--text);
+    font: inherit;
+}
+
+textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+button,
+.button {
+    display: inline-block;
+    padding: 0.7rem 1.1rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--primary);
+    color: white;
+    font: inherit;
+    font-weight: 650;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+button:hover,
+.button:hover {
+    background: var(--primary-hover);
+}
+
+.button-secondary {
+    background: white;
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.button-secondary:hover {
+    background: #e9eef6;
+}
+
+.button-danger {
+    background: var(--danger);
+}
+
+.button-danger:hover {
+    background: #8d1b13;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.notice {
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+}
+
+.notice-success {
+    background: #ecfdf3;
+    border-color: #75b995;
+    color: #14532d;
+}
+
+.notice-error,
+.field-error {
+    color: #9f2018;
+}
+
+.notice-error {
+    background: #fff1f0;
+    border-color: #df9c96;
+}
+
+.field-error,
+.help-text {
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.empty-state {
+    padding: 2rem;
+    text-align: center;
+}
+
+.site-footer {
+    border-top: 1px solid var(--border);
+    background: white;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+code {
+    overflow-wrap: anywhere;
+}
+
+:focus-visible {
+    outline: 3px solid #d97706;
+    outline-offset: 3px;
+}
+
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: 1rem;
+    z-index: 10;
+    padding: 0.75rem;
+    background: white;
+    color: var(--text);
+}
+
+.skip-link:focus {
+    top: 0.5rem;
+}
+.dashboard-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin: 0;
+}
+
+.summary-card dt {
+    color: var(--muted);
+    font-weight: 650;
+}
+
+.summary-card dd {
+    margin: 0.4rem 0 0;
+    font-size: 2rem;
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+.dashboard-section {
+    margin-top: 2rem;
+}
+
+.overdue-label {
+    color: var(--danger);
+    font-weight: 750;
+}

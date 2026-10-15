@@ -11,3 +11,10 @@ playwright-report/
 .DS_Store
 .vscode/
 .idea/
+# Additional local settings and generated files
+.env.*
+!.env.example
+*.py[cod]
+.coverage*
+coverage.xml
+Thumbs.db

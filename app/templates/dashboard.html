@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <div class="page-heading">
+        <h1>TaskFlow dashboard</h1>
+        <p class="muted">
+            Your projects and tasks at a glance.
+            {{ today.strftime('%d %b %Y') }} · UTC
+        </p>
+        <div class="actions">
+            <a class="button"
+               href="{{ url_for('ui.create_project') }}">
+                Create project
+            </a>
+            <a class="button button-secondary"
+               href="{{ url_for('ui.projects') }}">
+                View projects
+            </a>
+        </div>
+    </div>
+
+    <section aria-label="Project and task totals">
+        <dl class="dashboard-summary">
+            {% for label, value in summary_cards %}
+                <div class="card summary-card">
+                    <dt>{{ label }}</dt>
+                    <dd>{{ value }}</dd>
+                </div>
+            {% endfor %}
+        </dl>
+    </section>
+
+    <section class="dashboard-section"
+             aria-labelledby="open-tasks-heading">
+        <h2 id="open-tasks-heading">Open tasks</h2>
+        <p class="muted">
+            Up to six unfinished tasks, earliest due date first.
+            Tasks without a due date appear last.
+        </p>
+
+        {% if open_tasks %}
+            <div class="card-grid">
+                {% for task, project_name in open_tasks %}
+                    <article class="card">
+                        <h3>{{ task.title }}</h3>
+
+                        <p>
+                            <a href="{{ url_for('ui.project_detail', project_id=task.project_id) }}">
+                                {{ project_name }}
+                            </a>
+                        </p>
+
+                        <p>
+                            <strong>Status:</strong>
+                            {{ statuses[task.status] }}
+                        </p>
+                        <p>
+                            <strong>Priority:</strong>
+                            {{ priorities[task.priority] }}
+                        </p>
+                        <p>
+                            <strong>Due date:</strong>
+                            {% if task.due_date %}
+                                {{ task.due_date.strftime('%d %b %Y') }}
+                            {% else %}
+                                No due date
+                            {% endif %}
+                        </p>
+
+                        {% if task.due_date and task.due_date < today %}
+                            <p class="overdue-label">Overdue</p>
+                        {% endif %}
+
+                        <a class="button button-secondary"
+                           href="{{ url_for('ui.edit_task', project_id=task.project_id, task_id=task.id) }}"
+                           aria-label="Edit {{ task.title }}">
+                            Edit task
+                        </a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card empty-state">
+                <h3>No open tasks</h3>
+                <p>
+                    Add a task from a project, or enjoy having
+                    everything completed.
+                </p>
+                <a href="{{ url_for('ui.projects') }}">
+                    View projects
+                </a>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

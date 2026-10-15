@@ -1,0 +1,235 @@
+TASKFLOW - APPLICATION AND CONTAINER HANDOVER
+Updated: 12 October 2026
+
+STATUS AND SCOPE
+The local Flask/PostgreSQL application, container startup, migrations and
+automated application tests are implemented and have passed the checks below.
+This document replaces the earlier skeleton-only handover.
+
+The latest recorded run passed 48 tests and 95 subtests with 99.64% Python
+application statement coverage against an 80% gate. Test and cleanup exit
+codes were both 0. These results do not establish completion of the team's
+CI/CD pipeline, staging/production deployment, monitoring or rollback.
+
+IMPLEMENTED FEATURES
+- Create, list and open projects; delete a project after confirmation.
+- Create, view, edit and delete tasks within a project.
+- Task title, description, status, priority and optional due date.
+- Required-field, length, status, priority and date validation with inline
+  errors and preservation of submitted values.
+- Task/project deletion confirmation and cancellation. Deleting a project
+  also deletes its tasks; another project's records are preserved.
+- Dashboard counts for projects, total tasks, each status and overdue tasks.
+  Overdue means unfinished with a due date before today in UTC. A task due
+  today, without a due date, or marked Done is not counted as overdue.
+- Up to six unfinished tasks, ordered by due date then ID, with undated
+  tasks last. Dashboard and Projects navigation is available throughout.
+- CSRF protection for form writes, escaped user text and database constraints.
+- Database-backed health check, Prometheus metrics and application version.
+
+LOCAL SETUP (WINDOWS POWERSHELL)
+Prerequisites: Docker Desktop running Linux containers and Docker Compose.
+Run commands from the TaskFlow directory. Normal startup does not require a
+host Python installation. The test script builds its own test dependencies.
+
+1. On a new checkout only, create .env if it does not already exist:
+   if (-not (Test-Path -LiteralPath .env)) { Copy-Item .env.example .env }
+
+2. Generate two separate local values by running this command twice:
+   [guid]::NewGuid().ToString("N")
+
+3. Edit .env and replace the POSTGRES_PASSWORD and SECRET_KEY placeholders
+   with those separate values. Keep APP_PORT=8000 and APP_VERSION=local for
+   the local setup. Do not commit or distribute .env.
+
+4. Validate and start the local stack:
+   docker compose -p aerodeploy-taskflow config --quiet
+   docker compose -p aerodeploy-taskflow up --build --wait --wait-timeout 180
+   echo $LASTEXITCODE
+
+5. Check the running services and endpoints:
+   docker compose -p aerodeploy-taskflow ps
+   curl.exe -I http://localhost:8000/
+   curl.exe -I http://localhost:8000/projects
+   curl.exe -i http://localhost:8000/health
+   curl.exe -sS http://localhost:8000/api/info
+   curl.exe -sS http://localhost:8000/metrics
+
+Expected: startup exit 0 and both services healthy. Open
+http://localhost:8000/ in a browser for the dashboard.
+
+ENDPOINTS AND CONFIGURATION
+/           HTML dashboard, HTTP 200.
+/projects   HTML project list, HTTP 200.
+/api/info   JSON service name TaskFlow and configured version.
+/health     Runs SELECT 1 against PostgreSQL. HTTP 200 with db/status ok
+            when successful; HTTP 503 when its database check fails.
+/metrics    Prometheus request counters and duration histograms, including
+            the custom taskflow_requests_total counter.
+
+POSTGRES_PASSWORD is required by the local database and app connection.
+SECRET_KEY is required by Compose and signs application sessions.
+APP_PORT defaults to 8000 and controls the host port only.
+APP_VERSION defaults to local and appears in /api/info and the page footer.
+DATABASE_URL is supplied to the web container by Compose. The app requires
+it at startup; inside Compose the database hostname is db, not localhost.
+
+The root Compose file builds locally and publishes the app only on
+127.0.0.1. PostgreSQL has no published host port. This is the local development
+configuration, not the staging/production deployment configuration.
+The current application has no login or per-user ownership; projects and
+tasks belong to the shared application dataset.
+
+CONTAINER AND DATABASE BEHAVIOUR
+The runtime uses Python 3.12-slim, PostgreSQL 17 and Gunicorn on port 8000.
+The application runs as the non-root taskflow user. Gunicorn uses one worker
+and four threads, writes access/error logs to the container streams, and
+starts with --no-control-socket.
+
+requirements.txt describes runtime dependency ranges. Docker installs the
+versions pinned in requirements-lock.txt. Dockerfile.test separately adds
+requirements-test-lock.txt for testing. Base image tags remain mutable;
+pinned Python dependencies alone do not make the entire build immutable.
+
+Database models are registered at application startup. Before starting the
+normal Gunicorn command, docker-entrypoint.py runs Flask-Migrate's db upgrade.
+If migration fails, startup stops instead of serving against that failure.
+Current migration: 41a8c3c36f29 (projects and tasks).
+
+projects stores name, description and creation time. tasks stores its project
+foreign key, title, description, status, priority, optional due date and
+timestamps. The foreign key uses ON DELETE CASCADE. Database checks enforce
+nonblank names/titles and supported task status/priority values.
+
+Inspect migration state in an already running stack:
+   docker compose -p aerodeploy-taskflow exec -T web python -m flask --app app db current
+   docker compose -p aerodeploy-taskflow exec -T web python -m flask --app app db heads
+
+PostgreSQL data lives in the Compose project's postgres_data named volume.
+Keep the same Compose project name to reuse that volume. Stopping services
+or recreating containers preserves it. A different project name normally
+uses a different volume and dataset.
+
+Useful local commands:
+   docker compose -p aerodeploy-taskflow logs --no-color --tail 80 web
+   docker compose -p aerodeploy-taskflow logs --no-color --tail 80 db
+   docker compose -p aerodeploy-taskflow stop
+   docker compose -p aerodeploy-taskflow up --no-build --no-recreate --wait --wait-timeout 180
+
+Use up --build after changing application source; the normal image copies
+the source and does not bind-mount it. Do not run down --volumes on the main
+stack unless intentionally deleting its database. Changing the password in
+.env does not change the password in an already-initialised database volume.
+
+AUTOMATED TESTS AND COVERAGE
+Run from TaskFlow in Windows PowerShell:
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-TaskFlow.ps1
+   echo $LASTEXITCODE
+
+The policy option applies only to that child PowerShell process. The script
+builds the application runtime and a separate test image. The first build
+needs access to the image/package registries.
+
+Testing uses docker-compose.test.yml as a standalone file, never as an
+override to the main Compose file. Each run has a unique taskflow-tests-*
+project, an internal network, no published ports and a PostgreSQL 17 database
+in temporary storage. Real migrations run before pytest. Test guards check
+the test environment flag, database URL and initialized database engine
+before clearing test rows. The main application's volume is not referenced.
+
+The script attempts cleanup of its temporary stack even when tests fail and
+preserves failure exit codes. Reports remain under test-results/<run-id>/:
+   coverage.xml    XML application coverage for CI
+   junit.xml       XML test results for CI
+   html/index.html Browsable application coverage
+   .coverage       Coverage measurement data
+
+Latest verified run: taskflow-tests-fa9e424e57ff, 12 October 2026.
+   Unit validation tests:             15
+   Application/database tests:        33
+   Total test methods passed:         48
+   Additional subtests passed:        95
+   Application statement coverage:    99.64% (275 of 276 statements)
+   Required coverage:                 80%
+   Test/coverage exit:                0
+   Cleanup exit:                      0
+
+The one uncovered statement is the missing-DATABASE_URL startup guard in
+app/__init__.py. The accepted coverage gate passed; this is not a failed test.
+
+Tests cover validation boundaries, project/task operations, project cascade
+deletion with another project retained, CSRF, missing and wrong-project
+routes, dashboard counts/order/limits, database constraints, escaping,
+navigation, version, health and metrics. Failure tests deliberately generate
+errors; some failures are simulated rather than real infrastructure outages.
+
+Coverage measures Python statements under app, not branch coverage,
+migrations, docker-entrypoint.py, HTML/CSS, real browser interactions or
+deployment. Do not count passing test methods as proof of those other areas.
+See tests/README.txt for the test setup and CI report details.
+
+MANUAL EVIDENCE COMPLETED LOCALLY
+- Healthy build/startup and non-root application runtime.
+- Database-backed health success, database stop returning 503, and recovery
+  returning 200 in the earlier manual health check.
+- Startup migrations on a fresh database and the existing database.
+- Stored records retained after stop/start and after forced container
+  recreation, with different database container IDs recorded.
+- Project and task forms, validation, task editing, delete confirmation and
+  cancellation, and successful task/project deletion.
+- Dashboard empty/open states, counts and overdue/completed behaviour.
+- Dashboard/Projects navigation and resolved page-rendering errors.
+- Recorded desktop and narrow-view dashboard screenshots; Add task and
+  Projects screenshots at 350 x 768 showing fields, navigation, footer and
+  action buttons fitting, with project buttons stacked. This is a visual
+  check of the shown views, not a claim of all-device/browser testing.
+
+Evidence includes terminal transcripts, screenshots and generated reports.
+The original ../evidence/test-coverage.txt records the test invocation and
+exit code but omits the child process's detailed test output. Retain the full
+terminal capture and the reports for taskflow-tests-fa9e424e57ff as supporting
+results. Earlier automated-tests.txt may include a failed assertion before
+its correction; keep the chronology.
+
+The separate evidence package includes clearly labelled presentation copies
+with local personal paths and account/machine identifiers redacted. Original
+records are retained separately. Test results, failures, timestamps and exit
+codes are preserved. Redacted copies are not unmodified raw transcripts.
+Generated reports are excluded from Git/Docker context by the ignore rules;
+preserve them separately as evidence and upload actual run reports in CI.
+
+TEAM INTEGRATION AND REMAINING ACCEPTANCE
+Aditya: repository/CI/CD integration, registry publishing, promotion and
+pipeline rollback. Abhinav: coordinate test integration and staging/browser/
+load checks. Unna: production infrastructure, proxy and monitoring. The
+application/container handover must still be accepted on the recipient's
+machine and in the team's environments.
+
+Include application source, templates/static assets, migrations, Docker and
+Compose files, dependency manifests, .env.example, test sources, test script
+and documentation in the team repository. Exclude .env, generated reports,
+local caches and database data. Record the accepted source commit SHA and
+repository link; neither is established by these local screenshots.
+
+CI must create the isolated database, apply migrations and run the tests with
+the coverage gate. A bare pytest invocation without that environment is
+insufficient. The supplied wrapper is for Windows PowerShell; the Ubuntu
+runner needs an equivalent lifecycle with unique project names, retained
+reports, failure propagation and cleanup. See tests/README.txt.
+
+Build and publish the application image in CI. Staging and production must
+consume the same tested commit-SHA image (preferably record its digest),
+without rebuilding on either server. Set APP_VERSION to that source SHA.
+Deployment wiring must supply environment-specific secrets and DATABASE_URL,
+database persistence, health checks and the intended proxy/network access.
+
+Before schema-changing releases, agree backup, migration and rollback
+procedures. Startup currently runs db upgrade; an older image can lack a
+newer revision already recorded in the database. Rolling back an image does
+not automatically roll back the schema or prove compatibility. Do not add an
+automatic database downgrade; test the agreed recovery path in staging.
+
+Still requiring team evidence: repository acceptance, CI execution/artifacts,
+staging and production smoke/browser tests, same-image promotion, monitoring
+dashboards/alerts, load checks and deployment rollback. Local automated and
+manual results above must not be presented as proof of these pending items.

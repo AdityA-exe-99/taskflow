@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+    <div class="page-heading">
+        <h1>Projects</h1>
+        <p class="muted">Organise your work into projects.</p>
+        <a class="button" href="{{ url_for('ui.create_project') }}">
+            Create project
+        </a>
+    </div>
+
+    {% if projects %}
+        <div class="card-grid">
+            {% for project in projects %}
+                <article class="card">
+                    <h2>
+                        <a href="{{ url_for('ui.project_detail', project_id=project.id) }}">
+                            {{ project.name }}
+                        </a>
+                    </h2>
+
+                    {% if project.description %}
+                        <p>{{ project.description }}</p>
+                    {% else %}
+                        <p class="muted">No description provided.</p>
+                    {% endif %}
+
+                    <p class="muted">
+                        Created
+                        <time datetime="{{ project.created_at.isoformat() }}">
+                            {{ project.created_at.strftime('%d %b %Y') }}
+                        </time>
+                    </p>
+                    <div class="actions">
+                        <a class="button button-secondary"
+                        href="{{ url_for('ui.project_detail', project_id=project.id) }}">
+                            Open project
+                        </a>
+                        <a class="button button-danger"
+                        href="{{ url_for('ui.delete_project', project_id=project.id) }}"
+                        aria-label="Delete project {{ project.name }}">
+                            Delete project
+                        </a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <section class="card empty-state">
+            <h2>No projects yet</h2>
+            <p class="muted">Create your first project to get started.</p>
+        </section>
+    {% endif %}
+{% endblock %}
