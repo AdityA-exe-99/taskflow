@@ -1,0 +1,25 @@
+groups:
+  - name: host
+    rules:
+      - alert: HighCPU
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+        for: 5m
+        annotations:
+          summary: CPU above 80% for 5 minutes
+      - alert: HighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 80
+        for: 5m
+        annotations:
+          summary: RAM above 80% for 5 minutes
+      - alert: DiskAlmostFull
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 85
+        for: 1m
+        annotations:
+          summary: Disk above 85%
+  - name: app
+    rules:
+      - alert: TaskFlowDown
+        expr: up{job="taskflow"} == 0
+        for: 1m
+        annotations:
+          summary: TaskFlow /metrics has not responded for 1 minute
