@@ -37,7 +37,7 @@ docker compose up -d
 - Grafana: `http://20.70.170.224:3000` (login required)
 - Dashboard: Node Exporter Full (Grafana ID 1860) for CPU, RAM, disk, network
 - Prometheus scrapes the VM (Node Exporter) and the app (`web:8000/metrics`)
-- Prometheus joins the app's Docker network (`APP_NETWORK`, default `aerodeploy-taskflow_default`), so the app must be running first
+- Prometheus joins the app's Docker network (`aerodeploy-taskflow_default`), so the app must be running first
 
 ### Alerts ([`monitoring/alerts.yml`](monitoring/alerts.yml))
 

@@ -23,7 +23,7 @@ services:
   grafana:
     image: grafana/grafana:11.1.0
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD in .env}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -32,10 +32,9 @@ services:
     restart: unless-stopped
 
 networks:
-  # The TaskFlow app's network, so Prometheus can reach web:8000/metrics.
-  # Must match the app's compose project name + "_default".
+  # The TaskFlow app's network, so Prometheus can reach web:8000/metrics
   app:
-    name: ${APP_NETWORK:-aerodeploy-taskflow_default}
+    name: aerodeploy-taskflow_default
     external: true
 
 volumes:
