@@ -1,5 +1,6 @@
-# Placeholder so branch protection has a check to require.
-# Switches to the self-hosted runner and gets build/deploy jobs once the CI VM is up.
+# TaskFlow pipeline (v1)
+# Pull requests: run unit + integration tests on the CI VM
+# Merge to main: run tests, then build the image and push it to GHCR tagged with the commit SHA
 name: Pipeline
 
 on:
@@ -7,11 +8,69 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/aditya-exe-99/taskflow
 
 jobs:
+  # kept the name "check" because branch protection requires it
   check:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ci-build]
     steps:
       - uses: actions/checkout@v4
-      - name: Repo check
-        run: echo "Pipeline triggered for ${{ github.sha }}"
+
+      # the test image builds on top of the normal app image
+      - name: Build test base image
+        run: docker build -t taskflow-test-runtime:local .
+
+      - name: Run unit and integration tests (80% coverage gate)
+        env:
+          TASKFLOW_TEST_REPORTS: ./test-results/latest
+        run: |
+          mkdir -p test-results/latest
+          chmod 777 test-results/latest
+          docker compose -p ci-${{ github.run_id }} -f docker-compose.test.yml up --build --exit-code-from tests
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.run_number }}
+          path: test-results/latest/
+
+      # containers write reports as a different user, so clean them up with docker
+      - name: Clean up
+        if: always()
+        run: |
+          docker compose -p ci-${{ github.run_id }} -f docker-compose.test.yml down -v
+          docker run --rm -v "$PWD/test-results:/r" busybox rm -rf /r/latest
+
+  build:
+    needs: check
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, ci-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build image
+        run: docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:main .
+
+      - name: Push image
+        run: |
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:main
+
+      - name: Summary
+        run: echo "Pushed \`$IMAGE:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Tidy old images
+        if: always()
+        run: docker image prune -f
