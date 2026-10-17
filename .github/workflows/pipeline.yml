@@ -1,6 +1,7 @@
-# TaskFlow pipeline (v2)
+# TaskFlow pipeline (v3)
 # Pull requests: run unit + integration tests on the CI VM
-# Merge to main: tests -> build + push image to GHCR -> deploy to production with health check and rollback
+# Merge to main: tests -> build + push image to GHCR -> staging (when enabled) -> production
+# Each deploy backs up the DB, checks /health and rolls back automatically if it fails
 name: Pipeline
 
 on:
@@ -9,6 +10,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: "Rollback test: deploy production with a wrong DB password so the health check fails"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -75,47 +81,59 @@ jobs:
         if: always()
         run: docker image prune -f
 
-  deploy-prod:
+  deploy-staging:
     needs: build
+    # switched on once the staging VM is ready (repository variable STAGING_READY = true)
+    if: vars.STAGING_READY == 'true'
     runs-on: [self-hosted, ci-build]
-    env:
-      HOST: ${{ secrets.PROD_HOST }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up SSH key
-        run: |
-          echo "${{ secrets.PROD_SSH_KEY }}" > "$RUNNER_TEMP/deploy_key"
-          chmod 600 "$RUNNER_TEMP/deploy_key"
-          echo "SSH_OPTS=-i $RUNNER_TEMP/deploy_key -o StrictHostKeyChecking=accept-new" >> "$GITHUB_ENV"
-
-      - name: Copy compose file and deploy script
-        run: scp $SSH_OPTS deploy/docker-compose.yml deploy/deploy.sh deploy@$HOST:/opt/aerodeploy/
-
-      # secrets go over stdin, so they never appear in logs or on the command line
-      - name: Send secrets to the server
+      - name: Deploy to staging (health check, roll back on failure)
         env:
-          DB_PW: ${{ secrets.PROD_DB_PASSWORD }}
+          DB_PW: ${{ secrets.STAGING_DB_PASSWORD }}
           APP_SECRET: ${{ secrets.SECRET_KEY }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
-          printf 'IMAGE_TAG=%s\nPOSTGRES_PASSWORD=%s\nSECRET_KEY=%s\n' "${{ github.sha }}" "$DB_PW" "$APP_SECRET" \
-            | ssh $SSH_OPTS deploy@$HOST 'umask 077; cat > /opt/aerodeploy/.env.new'
-
-      - name: Log in to GHCR on the server
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | ssh $SSH_OPTS deploy@$HOST "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
-
-      - name: Deploy, health check, roll back on failure
-        run: ssh $SSH_OPTS deploy@$HOST "bash /opt/aerodeploy/deploy.sh ${{ github.sha }}"
-
-      - name: Check the live site through Nginx
-        continue-on-error: true
-        run: curl -fsS "http://$HOST/health"
+          echo "${{ secrets.STAGING_SSH_KEY }}" > "$RUNNER_TEMP/deploy_key"
+          chmod 600 "$RUNNER_TEMP/deploy_key"
+          bash deploy/remote-deploy.sh "${{ secrets.STAGING_HOST }}" "$RUNNER_TEMP/deploy_key" "${{ github.sha }}"
 
       - name: Summary
-        run: echo "Deployed \`$IMAGE:${{ github.sha }}\` to production (http://$HOST)" >> $GITHUB_STEP_SUMMARY
+        run: echo "Deployed \`$IMAGE:${{ github.sha }}\` to staging" >> $GITHUB_STEP_SUMMARY
 
       - name: Clean up
         if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key"
+
+  deploy-prod:
+    needs: [build, deploy-staging]
+    # runs after staging passes, or straight after build while staging is switched off
+    if: always() && needs.build.result == 'success' && (needs.deploy-staging.result == 'success' || needs.deploy-staging.result == 'skipped')
+    runs-on: [self-hosted, ci-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production (health check, roll back on failure)
+        env:
+          # the rollback test sends a wrong password so the new release fails its health check
+          DB_PW: ${{ inputs.simulate_failure && 'wrong-password-rollback-test' || secrets.PROD_DB_PASSWORD }}
+          APP_SECRET: ${{ secrets.SECRET_KEY }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
-          ssh $SSH_OPTS deploy@$HOST "docker logout ghcr.io" || true
-          rm -f "$RUNNER_TEMP/deploy_key"
+          echo "${{ secrets.PROD_SSH_KEY }}" > "$RUNNER_TEMP/deploy_key"
+          chmod 600 "$RUNNER_TEMP/deploy_key"
+          bash deploy/remote-deploy.sh "${{ secrets.PROD_HOST }}" "$RUNNER_TEMP/deploy_key" "${{ github.sha }}"
+
+      - name: Check the live site through Nginx
+        continue-on-error: true
+        run: curl -fsS "http://${{ secrets.PROD_HOST }}/health"
+
+      - name: Summary
+        run: echo "Deployed \`$IMAGE:${{ github.sha }}\` to production" >> $GITHUB_STEP_SUMMARY
+
+      - name: Clean up
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key"
