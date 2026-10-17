@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # VM health: CPU, RAM, disk, network
+  - job_name: node
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # TaskFlow app: request count, latency and errors from /metrics
+  # "web" is the app service in the TaskFlow compose project (see README)
+  - job_name: taskflow
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['web:8000']
