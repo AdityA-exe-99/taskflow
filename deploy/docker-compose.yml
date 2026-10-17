@@ -1,0 +1,43 @@
+# Server compose file, used on staging and production.
+# Runs the image the pipeline built (tagged with the commit SHA) plus PostgreSQL.
+# The pipeline writes the .env next to this file with IMAGE_TAG and the secrets.
+name: aerodeploy-taskflow
+
+services:
+  web:
+    image: ghcr.io/aditya-exe-99/taskflow:${IMAGE_TAG:?IMAGE_TAG not set}
+    restart: unless-stopped
+    ports:
+      # only reachable on the VM itself; Nginx (prod) or the tests (staging) sit in front
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_URL: "postgresql://taskflow:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/taskflow"
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY}"
+      APP_VERSION: "${IMAGE_TAG}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+# shared with Unna's Prometheus so it can scrape web:8000/metrics
+networks:
+  default:
+    name: aerodeploy-taskflow_default
+    external: true
+
+volumes:
+  postgres_data:
