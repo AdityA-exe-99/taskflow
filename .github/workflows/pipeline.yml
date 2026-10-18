@@ -16,6 +16,11 @@ on:
         type: boolean
         default: false
 
+      simulate_e2e_failure:
+        description: "Demo: make the staging browser tests fail so production is skipped"
+        type: boolean
+        default: false
+
 permissions:
   contents: read
   packages: write
@@ -100,6 +105,21 @@ jobs:
           chmod 600 "$RUNNER_TEMP/deploy_key"
           bash deploy/remote-deploy.sh "${{ secrets.STAGING_HOST }}" "$RUNNER_TEMP/deploy_key" "${{ github.sha }}"
 
+      # Playwright browser tests run on the staging VM against the release just deployed.
+      # Any failure fails this job, so deploy-prod is skipped.
+      - name: Browser (E2E) tests on staging
+        env:
+          E2E_SIMULATE_FAILURE: ${{ inputs.simulate_e2e_failure && 'true' || 'false' }}
+        run: bash deploy/run-staging-e2e.sh "${{ secrets.STAGING_HOST }}" "$RUNNER_TEMP/deploy_key" "${{ github.sha }}"
+
+      - name: Upload browser test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ github.run_number }}
+          path: test-results/e2e/
+          if-no-files-found: ignore
+          
       - name: Summary
         run: echo "Deployed \`$IMAGE:${{ github.sha }}\` to staging" >> $GITHUB_STEP_SUMMARY
 
