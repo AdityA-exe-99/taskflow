@@ -119,7 +119,7 @@ jobs:
           name: e2e-results-${{ github.run_number }}
           path: test-results/e2e/
           if-no-files-found: ignore
-          
+
       - name: Summary
         run: echo "Deployed \`$IMAGE:${{ github.sha }}\` to staging" >> $GITHUB_STEP_SUMMARY
 
@@ -148,7 +148,6 @@ jobs:
           bash deploy/remote-deploy.sh "${{ secrets.PROD_HOST }}" "$RUNNER_TEMP/deploy_key" "${{ github.sha }}"
 
       - name: Check the live site through Nginx
-        continue-on-error: true
         run: curl -fsS "http://${{ secrets.PROD_HOST }}/health"
 
       - name: Summary
