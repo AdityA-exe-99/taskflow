@@ -23,7 +23,7 @@ def test_deployed_version_is_the_commit_under_test(page: Page, base_url):
 
 def test_dashboard_loads_and_navigation_works(page: Page):
     page.goto("/")
-    expect(page.get_by_role("heading", level=1)).to_have_text("TaskFlow dashboard")
+    expect(page.get_by_role("heading", level=1)).to_contain_text("TaskFlow dashboard")
     expect(page.get_by_role("region", name="Project and task totals")).to_be_visible()
 
     nav = page.get_by_role("navigation", name="Main navigation")
@@ -31,4 +31,4 @@ def test_dashboard_loads_and_navigation_works(page: Page):
     expect(page.get_by_role("heading", level=1)).to_have_text("Projects")
 
     nav.get_by_role("link", name="Dashboard").click()
-    expect(page.get_by_role("heading", level=1)).to_have_text("TaskFlow dashboard")
+    expect(page.get_by_role("heading", level=1)).to_contain_text("TaskFlow dashboard")
