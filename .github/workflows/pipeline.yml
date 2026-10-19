@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: test-reports-${{ github.run_number }}
           path: test-results/latest/
@@ -114,7 +114,7 @@ jobs:
 
       - name: Upload browser test results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: e2e-results-${{ github.run_number }}
           path: test-results/e2e/
