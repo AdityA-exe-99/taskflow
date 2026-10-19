@@ -33,7 +33,7 @@ jobs:
   check:
     runs-on: [self-hosted, ci-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # the test image builds on top of the normal app image
       - name: Build test base image
@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-reports-${{ github.run_number }}
           path: test-results/latest/
@@ -66,7 +66,7 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, ci-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -92,7 +92,7 @@ jobs:
     if: vars.STAGING_READY == 'true'
     runs-on: [self-hosted, ci-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Deploy to staging (health check, roll back on failure)
         env:
@@ -114,7 +114,7 @@ jobs:
 
       - name: Upload browser test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-results-${{ github.run_number }}
           path: test-results/e2e/
@@ -133,7 +133,7 @@ jobs:
     if: always() && needs.build.result == 'success' && (needs.deploy-staging.result == 'success' || needs.deploy-staging.result == 'skipped')
     runs-on: [self-hosted, ci-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Deploy to production (health check, roll back on failure)
         env:
