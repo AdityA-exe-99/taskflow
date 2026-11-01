@@ -1,5 +1,6 @@
 # The script builds this base from the normal Dockerfile first.
-FROM taskflow-test-runtime:local
+ARG TASKFLOW_TEST_BASE=taskflow-test-runtime:local
+FROM ${TASKFLOW_TEST_BASE}
 
 USER root
 COPY requirements-test-lock.txt /app/requirements-test-lock.txt
