@@ -105,6 +105,17 @@ jobs:
           chmod 600 "$RUNNER_TEMP/deploy_key"
           bash deploy/remote-deploy.sh "${{ secrets.STAGING_HOST }}" "$RUNNER_TEMP/deploy_key" "${{ github.sha }}"
 
+      - name: Unit and integration tests on staging (80% coverage gate)
+        run: bash deploy/run-staging-unit-integration.sh "${{ secrets.STAGING_HOST }}" "$RUNNER_TEMP/deploy_key" "${{ github.sha }}"
+
+      - name: Upload staging unit, integration and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: staging-test-reports-${{ github.run_number }}
+          path: test-results/staging-unit-integration/
+          if-no-files-found: warn
+
       # Playwright browser tests run on the staging VM against the release just deployed.
       # Any failure fails this job, so deploy-prod is skipped.
       - name: Browser (E2E) tests on staging
