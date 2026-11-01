@@ -26,6 +26,8 @@ cleanup() {
   result=$?
   trap - EXIT
   docker compose -p "$PROJECT" -f docker-compose.test.yml down -v || true
+  # one test image per run would slowly fill the staging disk
+  docker image rm -f "$TASKFLOW_TEST_IMAGE" >/dev/null 2>&1 || true
   exit "$result"
 }
 trap cleanup EXIT
@@ -43,6 +45,10 @@ if ! "${SSH[@]}" "tar -C '$REMOTE/results' -cf - ." | tar -C "$REPORTS" -xf -; t
   echo "Unable to retrieve staging test reports"
   exit 1
 fi
+# Remove this run's working folder from staging. The reports were written by the
+# container's non-root user, so they are removed with the release image itself.
+"${SSH[@]}" "docker run --rm --user root --entrypoint rm -v '$REMOTE:/r' 'ghcr.io/aditya-exe-99/taskflow:$VERSION' -rf /r/results && rm -rf '$REMOTE'" \
+  || echo "Warning: could not remove $REMOTE on staging"
 if [ "$status" -ne 0 ]; then
   echo "Unit/integration tests failed on staging; production is blocked"
   exit "$status"

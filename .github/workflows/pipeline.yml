@@ -1,6 +1,6 @@
 # TaskFlow pipeline (v3)
 # Pull requests: run unit + integration tests on the CI VM
-# Merge to main: tests -> build + push image to GHCR -> staging (when enabled) -> production
+# Merge to main: tests -> build + push image to GHCR -> staging (deploy, unit/integration + E2E tests) -> production
 # Each deploy backs up the DB, checks /health and rolls back automatically if it fails
 name: Pipeline
 
@@ -140,8 +140,8 @@ jobs:
 
   deploy-prod:
     needs: [build, deploy-staging]
-    # runs after staging passes, or straight after build while staging is switched off
-    if: always() && needs.build.result == 'success' && (needs.deploy-staging.result == 'success' || needs.deploy-staging.result == 'skipped')
+    # runs only after staging passes: deployment, unit/integration tests and E2E tests on the Test server
+    if: always() && needs.build.result == 'success' && needs.deploy-staging.result == 'success'
     runs-on: [self-hosted, ci-build]
     steps:
       - uses: actions/checkout@v5
